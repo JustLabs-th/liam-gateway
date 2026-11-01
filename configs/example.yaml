@@ -1,0 +1,58 @@
+listen: "127.0.0.1:8080"
+public_url: "http://localhost:8080"
+web_url: "http://127.0.0.1:3000"
+database_url: "${DATABASE_URL}"
+redis_url: "${REDIS_URL}"
+encryption_key: "${GATEWAY_ENCRYPTION_KEY}"
+max_request_bytes: 2097152
+request_timeout: 10m
+upstream_header_timeout: 60s
+max_retries: 1
+
+auth:
+  mode: disabled
+  # Only required in oidc mode. Subjects identify accounts within this issuer.
+  issuer: "${OIDC_ISSUER}"
+  client_id: "${OIDC_CLIENT_ID}"
+  client_secret: "${OIDC_CLIENT_SECRET}"
+  admin_subjects: []
+  payload_subjects: []
+
+providers:
+  openai:
+    type: openai
+    base_url: "https://api.openai.com/v1"
+    api_key: "${OPENAI_API_KEY}"
+  anthropic:
+    type: anthropic
+    base_url: "https://api.anthropic.com/v1"
+    api_key: "${ANTHROPIC_API_KEY}"
+
+# Seeds only missing aliases. Subsequent changes use Admin UI/API.
+# Replace model IDs and pricing with verified provider/account-specific values.
+models:
+  chat-fast:
+    provider: openai
+    model: replace-with-openai-model-id
+    max_input_tokens: 32768
+    max_output_tokens: 4096
+    input_usd_per_million: 0
+    output_usd_per_million: 0
+  chat-quality:
+    provider: anthropic
+    model: replace-with-anthropic-model-id
+    max_input_tokens: 32768
+    max_output_tokens: 4096
+    input_usd_per_million: 0
+    output_usd_per_million: 0
+
+capture:
+  retention_days: 30
+  archive_after: 1m
+  storage: filesystem # filesystem for local development, s3 for deployment
+  directory: .data/archives
+  endpoint: "${S3_ENDPOINT}"
+  bucket: "${S3_BUCKET}"
+  access_key: "${S3_ACCESS_KEY}"
+  secret_key: "${S3_SECRET_KEY}"
+  secure: true

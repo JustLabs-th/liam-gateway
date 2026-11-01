@@ -1,0 +1,8 @@
+.git
+.env*
+.data
+bin
+configs/local.yaml
+web/node_modules
+web/.next
+web/tsconfig.tsbuildinfo

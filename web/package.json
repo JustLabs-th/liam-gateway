@@ -1,0 +1,29 @@
+{
+  "name": "llm-gateway-admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "node scripts/start.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "pnpm build && playwright test",
+    "format": "prettier --write src tests playwright.config.ts next.config.ts scripts/start.mjs",
+    "format:check": "prettier --check src tests playwright.config.ts next.config.ts scripts/start.mjs",
+    "test:unit": "node --experimental-strip-types --test tests/unit/*.test.ts"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.25.0"
+}

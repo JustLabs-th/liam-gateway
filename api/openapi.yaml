@@ -1,0 +1,737 @@
+openapi: 3.1.0
+info:
+  title: Relay LLM Gateway
+  version: 0.1.0
+  description: Phase 1. Admin security is disabled when auth.mode=disabled; oidc mode
+    uses an HttpOnly session cookie. Browser mutations require the custom header and
+    same configured Origin. See docs/compatibility.md for the supported inference
+    subset.
+servers:
+- url: http://localhost:8080
+paths:
+  /v1/chat/completions:
+    post:
+      summary: Create text/tool completion with full durable capture
+      security:
+      - gatewayKey: []
+      responses:
+        '200':
+          description: JSON Chat Completions response or SSE chunks ending in [DONE].
+            X-Request-ID links capture.
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+        '402':
+          description: Budget reservation rejected
+        '413':
+          description: Body exceeds configured size
+        '429':
+          description: RPM or concurrent request limit
+        '502':
+          description: Provider failure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+  /v1/models:
+    get:
+      summary: List allowed gateway model aliases
+      security:
+      - gatewayKey: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/me:
+    get:
+      summary: Current principal and auth mode
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/overview:
+    get:
+      summary: Usage overview for retained requests this UTC month
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/keys:
+    get:
+      summary: List keys without credentials (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+    post:
+      summary: Create key; plaintext credential returned once (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyInput'
+  /admin/api/keys/{id}:
+    delete:
+      summary: Revoke key immediately (Admin)
+      security:
+      - admin: []
+      responses:
+        '204':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /admin/api/keys/{id}/rotate:
+    post:
+      summary: Rotate credential; previous credential stops working (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /admin/api/models:
+    get:
+      summary: Catalog and provider configured flags without secrets
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/models/{name}:
+    put:
+      summary: Create/update persistent alias (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Model'
+  /admin/api/requests:
+    get:
+      summary: List up to 200 request records, newest first
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: model
+        in: query
+        schema:
+          type: string
+      - name: key_id
+        in: query
+        schema:
+          type: string
+      - name: owner_user_id
+        in: query
+        schema:
+          type: string
+      - name: state
+        in: query
+        schema:
+          type: string
+      - name: before
+        in: query
+        schema:
+          type: string
+      - name: after
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          maximum: 200
+          default: 50
+      - name: status
+        in: query
+        schema:
+          type: integer
+  /admin/api/requests/{id}:
+    get:
+      summary: Request metadata and upstream attempts
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /admin/api/requests/{id}/payload:
+    get:
+      summary: Decrypt full events; requires payload permission and records audit
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+  /admin/api/audit:
+    get:
+      summary: Latest 100 audit events (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/users:
+    get:
+      summary: List SSO accounts (Admin)
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/users/{id}:
+    patch:
+      summary: Update role and payload permission (Admin)
+      security:
+      - admin: []
+      responses:
+        '204':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPermissions'
+  /auth/login:
+    get:
+      summary: Start OIDC login; disabled mode redirects to Admin
+      security: []
+      responses:
+        '302':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+        '303':
+          description: Redirect to Admin when SSO is disabled
+  /auth/callback:
+    get:
+      summary: OIDC authorization code callback
+      security: []
+      responses:
+        '303':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /auth/logout:
+    post:
+      summary: Delete local session (does not end IdP session)
+      security:
+      - admin: []
+      responses:
+        '204':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+      parameters:
+      - name: X-Gateway-Admin
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1'
+  /healthz:
+    get:
+      summary: Process liveness
+      security: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /readyz:
+    get:
+      summary: PostgreSQL and Redis readiness
+      security: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /metrics:
+    get:
+      summary: Prometheus metrics; Admin authorization
+      security:
+      - admin: []
+      responses:
+        '200':
+          description: JSON response; see implementation and compatibility documentation
+            for response fields.
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission denied
+        '503':
+          description: Infrastructure unavailable
+  /admin/api/analytics:
+    get:
+      summary: 'Inference analytics: time series, latency, estimated spend and model/key
+        breakdowns'
+      security:
+      - admin: []
+      parameters:
+      - name: range
+        in: query
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          - 30d
+          default: 24h
+      - name: model
+        in: query
+        schema:
+          type: string
+      - name: key_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Summary, zero-filled series, by_model and by_key (up to 100)
+            arrays; absent latency samples are null
+        '400':
+          description: Invalid range
+        '401':
+          description: Authentication required
+        '503':
+          description: Analytics unavailable
+components:
+  securitySchemes:
+    gatewayKey:
+      type: http
+      scheme: bearer
+    admin:
+      type: apiKey
+      in: cookie
+      name: gateway_session
+  schemas:
+    Model:
+      type: object
+      required:
+      - provider
+      - model
+      - max_input_tokens
+      - max_output_tokens
+      - input_usd_per_million
+      - output_usd_per_million
+      additionalProperties: false
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        max_input_tokens:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        max_output_tokens:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        input_usd_per_million:
+          type: number
+          minimum: 0
+        output_usd_per_million:
+          type: number
+          minimum: 0
+    KeyInput:
+      type: object
+      required:
+      - name
+      - allowed_models
+      - rpm
+      - concurrency
+      - monthly_budget_microusd
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        allowed_models:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        rpm:
+          type: integer
+          minimum: 1
+          maximum: 100000
+        concurrency:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        monthly_budget_microusd:
+          type: integer
+          minimum: 0
+          description: 0 means unlimited
+    UserPermissions:
+      type: object
+      required:
+      - role
+      - can_read_payload
+      additionalProperties: false
+      properties:
+        role:
+          enum:
+          - admin
+          - viewer
+        can_read_payload:
+          type: boolean
+    ChatRequest:
+      type: object
+      required:
+      - model
+      - messages
+      additionalProperties: false
+      properties:
+        model:
+          type: string
+          description: Gateway model alias
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Message'
+        stream:
+          type: boolean
+          default: false
+        max_tokens:
+          type: integer
+          minimum: 1
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+        stop:
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+        tools:
+          type: array
+          items:
+            type: object
+        tool_choice:
+          oneOf:
+          - enum:
+            - auto
+            - none
+            - required
+          - type: object
+        stream_options:
+          type: object
+          additionalProperties: false
+          properties:
+            include_usage:
+              type: boolean
+    Message:
+      type: object
+      required:
+      - role
+      - content
+      additionalProperties: false
+      properties:
+        role:
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+        content:
+          type:
+          - string
+          - 'null'
+        tool_calls:
+          type: array
+          items:
+            type: object
+        tool_call_id:
+          type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            type:
+              type: string
+            code:
+              type: string
+            message:
+              type: string

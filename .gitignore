@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+/configs/local.yaml
+/.data/
+/bin/
+/web/node_modules/
+/web/.next/
+/web/tsconfig.tsbuildinfo
+/coverage.out
+
+/web/test-results/
+/web/playwright-report/
